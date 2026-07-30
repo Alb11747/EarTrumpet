@@ -1,4 +1,5 @@
 ﻿using EarTrumpet.Extensions;
+using EarTrumpet.UI.Notifications;
 using EarTrumpet.UI.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
@@ -33,12 +34,12 @@ public partial class AppItemView : UserControl
             {
                 case Key.Right:
                 case Key.OemPlus:
-                    App.Volume += 10;
+                    ChangeVolume(10);
                     e.Handled = true;
                     break;
                 case Key.Left:
                 case Key.OemMinus:
-                    App.Volume -= 10;
+                    ChangeVolume(-10);
                     e.Handled = true;
                     break;
             }
@@ -50,17 +51,19 @@ public partial class AppItemView : UserControl
         {
             case Key.M:
             case Key.OemPeriod:
-                App.IsMuted = !App.IsMuted;
+                var isMuted = !App.IsMuted;
+                App.IsMuted = isMuted;
+                VolumeToastService.ShowApp(App, GetContainingScreen(), isMuted);
                 e.Handled = true;
                 break;
             case Key.Right:
             case Key.OemPlus:
-                App.Volume++;
+                ChangeVolume(1);
                 e.Handled = true;
                 break;
             case Key.Left:
             case Key.OemMinus:
-                App.Volume--;
+                ChangeVolume(-1);
                 e.Handled = true;
                 break;
             case Key.Space:
@@ -68,6 +71,24 @@ public partial class AppItemView : UserControl
                 e.Handled = true;
                 break;
         }
+    }
+
+    private void ChangeVolume(float delta)
+    {
+        var oldVolume = App.Volume;
+        App.Volume += delta;
+        if (App.Volume != oldVolume)
+        {
+            VolumeToastService.ShowApp(App, GetContainingScreen());
+        }
+    }
+
+    private System.Windows.Forms.Screen GetContainingScreen()
+    {
+        var window = Window.GetWindow(this);
+        return window == null
+            ? System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position)
+            : System.Windows.Forms.Screen.FromHandle(window.GetHandle());
     }
 
     private void OpenPopup()

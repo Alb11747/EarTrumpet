@@ -12,7 +12,7 @@ using System.Windows.Threading;
 namespace EarTrumpet.UI.ViewModels;
 
 // This ViewModel is used in redirection scenarios. When we move a State=Inactive session to a device,
-// this serves as the visualziation and data container for that app until a real session is created.
+// this serves as the visualization and data container for that app until a real session is created.
 public class TemporaryAppItemViewModel : BindableBase, IAppItemViewModel
 {
     public event EventHandler Expired;

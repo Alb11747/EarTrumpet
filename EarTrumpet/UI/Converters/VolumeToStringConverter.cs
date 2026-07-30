@@ -9,16 +9,22 @@ public class VolumeToStringConverter : IValueConverter
     {
         if (value is float vol)
         {
+            if (!float.IsFinite(vol))
+            {
+                vol = App.Settings.UseLogarithmicVolume
+                    ? App.Settings.LogarithmicVolumeMinDb
+                    : 0f;
+            }
+
             if (App.Settings.UseLogarithmicVolume)
             {
                 // Special case for -0.0 display
-                if (vol >= -0.05)
-                {
-                    return "-0.0";
-                }
-                return $"{vol:0.0}";
+                var formattedVolume = vol >= -0.05
+                    ? "-0.0"
+                    : vol.ToString("0.0", culture);
+                return $"{formattedVolume} {Properties.Resources.VolumeUnit_Decibel}";
             }
-            return vol.ToString();
+            return vol.ToString(culture);
         }
         return "";
     }

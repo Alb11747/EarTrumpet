@@ -1,5 +1,6 @@
 ﻿using EarTrumpet.UI.Helpers;
 using EarTrumpet.Interop.Helpers;
+using EarTrumpet.UI.Notifications;
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -326,7 +327,13 @@ public class FlyoutViewModel : BindableBase, IPopupHostViewModel, IFlyoutViewMod
         {
             if (!_winRect.Contains(new Point(e.X, e.Y)))
             {
-                existing.IncrementVolume(Math.Sign(e.Delta) * 2);
+                var oldVolume = existing.Volume;
+                existing.IncrementVolume(Math.Sign(e.Delta) * (_settings.UseLogarithmicVolume ? 0.2f : 2.0f));
+                if (existing.Volume != oldVolume)
+                {
+                    var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(e.X, e.Y));
+                    VolumeToastService.ShowDevice(existing, screen);
+                }
                 return -1;
             }
         }

@@ -8,6 +8,8 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using FormsCursor = System.Windows.Forms.Cursor;
+using FormsScreen = System.Windows.Forms.Screen;
 using EarTrumpet.DataModel.WindowsAudio;
 using EarTrumpet.Diagnosis;
 using EarTrumpet.Extensibility;
@@ -15,6 +17,7 @@ using EarTrumpet.Extensibility.Hosting;
 using EarTrumpet.Extensions;
 using EarTrumpet.Interop.Helpers;
 using EarTrumpet.UI.Helpers;
+using EarTrumpet.UI.Notifications;
 using EarTrumpet.UI.ViewModels;
 using EarTrumpet.UI.Views;
 using Microsoft.Win32;
@@ -56,6 +59,10 @@ public sealed partial class App : IDisposable
     }
 
     private static readonly Stopwatch s_appTimer = Stopwatch.StartNew();
+    private static readonly GridLength s_linearVolumeCellWidth = new(63);
+    private static readonly GridLength s_logarithmicVolumeCellWidth = new(104);
+    private static readonly GridLength s_linearToastVolumeCellWidth = new(54);
+    private static readonly GridLength s_logarithmicToastVolumeCellWidth = new(90);
     private FlyoutViewModel _flyoutViewModel;
 
     private const float c_focusedAppLinearVolumeStep = 2f;
@@ -74,13 +81,19 @@ public sealed partial class App : IDisposable
     {
         RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
 
-        Exit += (_, __) => IsShuttingDown = true;
+        Exit += (_, __) =>
+        {
+            IsShuttingDown = true;
+            VolumeToastService.Shutdown();
+        };
         HasIdentity = PackageHelper.CheckHasIdentity();
         HasDevIdentity = PackageHelper.HasDevIdentity();
         PackageVersion = PackageHelper.GetVersion(HasIdentity);
         PackageName = PackageHelper.GetFamilyName(HasIdentity);
 
         Settings = new AppSettings();
+        UpdateVolumeDisplayMetrics();
+        Settings.UseLogarithmicVolumeChanged += (_, __) => UpdateVolumeDisplayMetrics();
         _errorReporter = new ErrorReporter(Settings);
 
         if (SingleInstanceAppMutex.TakeExclusivity())
@@ -161,7 +174,7 @@ public sealed partial class App : IDisposable
 
         _trayIcon.PrimaryInvoke += (_, type) => _flyoutViewModel.OpenFlyout(type);
         _trayIcon.SecondaryInvoke += (_, args) => _trayIcon.ShowContextMenu(GetTrayContextMenuItems(), args.Point);
-        _trayIcon.TertiaryInvoke += (_, __) => CollectionViewModel.Default?.ToggleMute.Execute(null);
+        _trayIcon.TertiaryInvoke += (_, __) => ToggleDefaultDeviceMuteFromTray();
         _trayIcon.Scrolled += TrayIconScrolled;
         _trayIcon.SetTooltip(CollectionViewModel.GetTrayToolTip());
         _trayIcon.IsVisible = true;
@@ -194,9 +207,40 @@ public sealed partial class App : IDisposable
     {
         if (Settings.UseScrollWheelInTray && (!Settings.UseGlobalMouseWheelHook || _flyoutViewModel.State == FlyoutViewState.Hidden))
         {
-            CollectionViewModel.Default?.IncrementVolume(
-                Math.Sign(wheelDelta) * (Settings.UseLogarithmicVolume ? 0.2f : 2.0f));
+            var device = CollectionViewModel.Default;
+            if (device != null)
+            {
+                var oldVolume = device.Volume;
+                device.IncrementVolume(Math.Sign(wheelDelta) * (Settings.UseLogarithmicVolume ? 0.2f : 2.0f));
+                if (device.Volume != oldVolume)
+                {
+                    VolumeToastService.ShowDevice(device, GetPointerScreen());
+                }
+            }
         }
+    }
+
+    private void UpdateVolumeDisplayMetrics()
+    {
+        Resources["Mutable_VolumeCellWidth"] = Settings.UseLogarithmicVolume
+            ? s_logarithmicVolumeCellWidth
+            : s_linearVolumeCellWidth;
+        Resources["Mutable_ToastVolumeCellWidth"] = Settings.UseLogarithmicVolume
+            ? s_logarithmicToastVolumeCellWidth
+            : s_linearToastVolumeCellWidth;
+    }
+
+    private void ToggleDefaultDeviceMuteFromTray()
+    {
+        var device = CollectionViewModel.Default;
+        if (device == null)
+        {
+            return;
+        }
+
+        var isMuted = !device.IsMuted;
+        device.IsMuted = isMuted;
+        VolumeToastService.ShowDevice(device, GetPointerScreen(), isMuted);
     }
 
     private static void DisplayFirstRunExperience()
@@ -414,24 +458,50 @@ public sealed partial class App : IDisposable
 
     private void AbsoluteVolumeIncrement()
     {
-        foreach (var device in CollectionViewModel.AllDevices.Where(d => !d.IsMuted || d.IsAbsMuted))
+        var changedDevices = new List<DeviceViewModel>();
+        foreach (var device in CollectionViewModel.AllDevices.Where(d => !d.IsMuted || d.IsAbsMuted).ToArray())
         {
+            var oldVolume = device.Volume;
             device.IsAbsMuted = false;
             device.IncrementVolume(2);
+            if (device.Volume != oldVolume)
+            {
+                changedDevices.Add(device);
+            }
+        }
+
+        var representative = GetRepresentativeDevice(changedDevices);
+        if (representative != null)
+        {
+            VolumeToastService.ShowDevice(representative, GetForegroundScreen());
         }
     }
 
     private void AbsoluteVolumeDecrement()
     {
-        foreach (var device in CollectionViewModel.AllDevices.Where(d => !d.IsMuted))
+        var changedDevices = new List<DeviceViewModel>();
+        var minimum = Settings.UseLogarithmicVolume ? Settings.LogarithmicVolumeMinDb : 0f;
+        foreach (var device in CollectionViewModel.AllDevices.Where(d => !d.IsMuted).ToArray())
         {
             var wasMuted = device.IsMuted;
+            var oldVolume = device.Volume;
             device.Volume -= 2;
 
-            if (!wasMuted == (device.Volume <= 0))
+            if (!wasMuted == (device.Volume <= minimum))
             {
                 device.IsAbsMuted = true;
             }
+
+            if (device.Volume != oldVolume)
+            {
+                changedDevices.Add(device);
+            }
+        }
+
+        var representative = GetRepresentativeDevice(changedDevices);
+        if (representative != null)
+        {
+            VolumeToastService.ShowDevice(representative, GetForegroundScreen());
         }
     }
 
@@ -451,13 +521,25 @@ public sealed partial class App : IDisposable
 
     private void ChangeFocusedAppVolume(float delta)
     {
+        var changedApps = new List<IAppItemViewModel>();
         var minimum = Settings.UseLogarithmicVolume ? Settings.LogarithmicVolumeMinDb : 0f;
         var maximum = Settings.UseLogarithmicVolume ? 0f : 100f;
 
         foreach (var app in GetFocusedApps())
         {
-            var currentVolume = float.IsFinite(app.Volume) ? app.Volume : minimum;
+            var oldVolume = app.Volume;
+            var currentVolume = float.IsFinite(oldVolume) ? oldVolume : minimum;
             app.Volume = Math.Clamp(currentVolume + delta, minimum, maximum);
+            if (app.Volume != oldVolume)
+            {
+                changedApps.Add(app);
+            }
+        }
+
+        var representative = GetRepresentativeApp(changedApps);
+        if (representative != null)
+        {
+            VolumeToastService.ShowApp(representative, GetForegroundScreen());
         }
     }
 
@@ -470,11 +552,43 @@ public sealed partial class App : IDisposable
         }
 
         var shouldMute = apps.Any(app => !app.IsMuted);
+        var changedApps = apps.Where(app => app.IsMuted != shouldMute).ToArray();
         foreach (var app in apps)
         {
             app.IsMuted = shouldMute;
         }
+
+        var representative = GetRepresentativeApp(changedApps);
+        if (representative != null)
+        {
+            VolumeToastService.ShowApp(representative, GetForegroundScreen(), shouldMute);
+        }
     }
+
+    private DeviceViewModel GetRepresentativeDevice(IReadOnlyCollection<DeviceViewModel> devices)
+    {
+        // Absolute hotkeys can affect every device. Prefer the default device, then use a
+        // stable identifier so collection ordering never determines the visible toast.
+        return devices.FirstOrDefault(device => ReferenceEquals(device, CollectionViewModel.Default))
+            ?? devices.OrderBy(device => device.Id, StringComparer.Ordinal).FirstOrDefault();
+    }
+
+    private IAppItemViewModel GetRepresentativeApp(IReadOnlyCollection<IAppItemViewModel> apps)
+    {
+        // The foreground app can have sessions on several devices. Prefer its default-device
+        // session, then use stable identifiers instead of whichever session was enumerated last.
+        var defaultDeviceId = CollectionViewModel.Default?.Id;
+        return apps
+            .OrderBy(app => app.Parent?.Id == defaultDeviceId ? 0 : 1)
+            .ThenBy(app => app.Parent?.Id ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(app => app.AppId ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(app => app.Id, StringComparer.Ordinal)
+            .FirstOrDefault();
+    }
+
+    private static FormsScreen GetPointerScreen() => FormsScreen.FromPoint(FormsCursor.Position);
+
+    private static unsafe FormsScreen GetForegroundScreen() => FormsScreen.FromHandle((IntPtr)PInvoke.GetForegroundWindow().Value);
 
     private IEnumerable<IAppItemViewModel> GetFocusedApps()
     {

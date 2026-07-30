@@ -1,0 +1,238 @@
+<Window x:Class="EarTrumpet.UI.Notifications.VolumeToastWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:ClassModifier="internal"
+        xmlns:Theme="clr-namespace:EarTrumpet.UI.Themes"
+        xmlns:conv="clr-namespace:EarTrumpet.UI.Converters"
+        xmlns:ctl="clr-namespace:EarTrumpet.UI.Controls"
+        xmlns:resx="clr-namespace:EarTrumpet.Properties"
+        Width="380"
+        MinHeight="84"
+        Theme:AcrylicBrush.Background="AcrylicColor_Flyout"
+        Theme:Options.Scope="Flyout"
+        Theme:Options.Source="System"
+        SizeToContent="Height"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Focusable="False"
+        ResizeMode="NoResize"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="Manual"
+        WindowStyle="None"
+        MouseEnter="Window_MouseEnter"
+        MouseLeave="Window_MouseLeave"
+        PreviewMouseDown="Window_PreviewMouseDown"
+        PreviewMouseWheel="Window_PreviewMouseWheel"
+        PreviewTouchDown="Window_PreviewTouchDown">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <conv:VolumeToStringConverter x:Key="VolumeToStringConverter" />
+
+        <Style x:Key="ToastButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{x:Null}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="Theme:Brush.Foreground" Value="Text" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBackground"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBackground"
+                                        Property="Theme:Brush.Background"
+                                        Value="Theme={Theme}ListLow, HighContrast=Highlight" />
+                                <Setter Property="Theme:Brush.Foreground"
+                                        Value="Theme=ApplicationText{Theme}Theme, HighContrast=HighlightText" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBackground"
+                                        Property="Theme:Brush.Background"
+                                        Value="Theme={Theme}ListMedium, HighContrast=Highlight" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Padding="12"
+            CornerRadius="6"
+            Theme:Brush.Background="FlyoutBackground">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="50" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="{DynamicResource Mutable_ToastVolumeCellWidth}" />
+                <ColumnDefinition Width="32" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="26" />
+                <RowDefinition Height="36" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Column="1"
+                       Grid.ColumnSpan="2"
+                       Margin="0,0,8,4"
+                       VerticalAlignment="Center"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       Text="{Binding Title}"
+                       TextTrimming="CharacterEllipsis"
+                       Theme:Brush.Foreground="Text" />
+
+            <Button x:Name="CloseButton"
+                    Grid.Column="3"
+                    Margin="0,-4,-4,0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    AutomationProperties.Name="{x:Static resx:Resources.CloseButtonAccessibleText}"
+                    Click="CloseButton_Click"
+                    Content="&#xE8BB;"
+                    FontSize="10"
+                    Style="{StaticResource ToastButtonStyle}" />
+
+            <Grid Grid.Row="1"
+                  Width="34"
+                  Height="34"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Center">
+                <Grid Visibility="{Binding IsDevice, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock FontSize="28"
+                               Opacity="0.4"
+                               Theme:Brush.Foreground="Text">
+                        <TextBlock.Style>
+                            <Style BasedOn="{StaticResource GlyphTextBlockStyle}" TargetType="{x:Type TextBlock}">
+                                <Setter Property="Text" Value="&#xE995;" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DeviceIconKind}" Value="Mute">
+                                        <Setter Property="Text" Value="&#xE74F;" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding DeviceIconKind}" Value="Microphone">
+                                        <Setter Property="Text" Value="&#xE720;" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock FontSize="28"
+                               Theme:Brush.Foreground="Text">
+                        <TextBlock.Style>
+                            <Style BasedOn="{StaticResource GlyphTextBlockStyle}" TargetType="{x:Type TextBlock}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DeviceIconKind}" Value="Mute">
+                                        <Setter Property="Text" Value="&#xE74F;" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding DeviceIconKind}" Value="Microphone">
+                                        <Setter Property="Text" Value="&#xE720;" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding DeviceIconKind}" Value="Bar0">
+                                        <Setter Property="Text" Value="&#xE992;" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding DeviceIconKind}" Value="Bar1">
+                                        <Setter Property="Text" Value="&#xE993;" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding DeviceIconKind}" Value="Bar2">
+                                        <Setter Property="Text" Value="&#xE994;" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding DeviceIconKind}" Value="Bar3">
+                                        <Setter Property="Text" Value="&#xE995;" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+
+                <Grid Visibility="{Binding IsApp, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Border x:Name="AppIconFallback"
+                            CornerRadius="2"
+                            Theme:Brush.Background="SystemAccent">
+                        <Border.Style>
+                            <Style TargetType="{x:Type Border}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Source, ElementName=AppIcon}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Text="{Binding AppIconText}"
+                                   Theme:Brush.Foreground="Text" />
+                    </Border>
+                    <ctl:ImageEx x:Name="AppIcon"
+                                 Width="34"
+                                 Height="34"
+                                 SourceEx="{Binding AppIcon}"
+                                 Stretch="Fill" />
+                </Grid>
+            </Grid>
+
+            <ctl:VolumeSlider x:Name="VolumeSlider"
+                              Grid.Row="1"
+                              Grid.Column="1"
+                              Height="24"
+                              Focusable="False"
+                              IsTabStop="False"
+                              PeakValue1="0"
+                              PeakValue2="0"
+                              Style="{StaticResource {x:Type Slider}}"
+                              Value="{Binding Volume, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+            <TextBlock Grid.Row="1"
+                       Grid.Column="2"
+                       Margin="8,0,6,0"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center"
+                       FontSize="18"
+                       Text="{Binding Volume, Mode=OneWay, Converter={StaticResource VolumeToStringConverter}}"
+                       Theme:Brush.Foreground="Text" />
+
+            <Button x:Name="MuteButton"
+                    Grid.Row="1"
+                    Grid.Column="3"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    AutomationProperties.Name="{x:Static resx:Resources.ToggleMuteToolTip}"
+                    Click="MuteButton_Click"
+                    FontSize="20"
+                    Style="{StaticResource ToastButtonStyle}"
+                    ToolTipService.ToolTip="{x:Static resx:Resources.ToggleMuteToolTip}">
+                <Button.Content>
+                    <TextBlock>
+                        <TextBlock.Style>
+                            <Style BasedOn="{StaticResource GlyphTextBlockStyle}" TargetType="TextBlock">
+                                <Setter Property="Text" Value="&#xE995;" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsMuted}" Value="True">
+                                        <Setter Property="Text" Value="&#xE74F;" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Button.Content>
+            </Button>
+        </Grid>
+    </Border>
+</Window>
