@@ -1,4 +1,6 @@
-﻿using EarTrumpet.UI.Helpers;
+﻿using EarTrumpet.Extensions;
+using EarTrumpet.UI.Helpers;
+using EarTrumpet.UI.Notifications;
 using EarTrumpet.UI.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
@@ -58,12 +60,12 @@ public partial class DeviceView : UserControl
             {
                 case Key.Right:
                 case Key.OemPlus:
-                    Device.Volume += 10;
+                    ChangeVolume(10);
                     e.Handled = true;
                     break;
                 case Key.Left:
                 case Key.OemMinus:
-                    Device.Volume -= 10;
+                    ChangeVolume(-10);
                     e.Handled = true;
                     break;
             }
@@ -75,17 +77,19 @@ public partial class DeviceView : UserControl
         {
             case Key.M:
             case Key.OemPeriod:
-                Device.IsMuted = !Device.IsMuted;
+                var isMuted = !Device.IsMuted;
+                Device.IsMuted = isMuted;
+                VolumeToastService.ShowDevice(Device, GetContainingScreen(), isMuted);
                 e.Handled = true;
                 break;
             case Key.Right:
             case Key.OemPlus:
-                Device.Volume++;
+                ChangeVolume(1);
                 e.Handled = true;
                 break;
             case Key.Left:
             case Key.OemMinus:
-                Device.Volume--;
+                ChangeVolume(-1);
                 e.Handled = true;
                 break;
             case Key.Space:
@@ -93,6 +97,24 @@ public partial class DeviceView : UserControl
                 e.Handled = true;
                 break;
         }
+    }
+
+    private void ChangeVolume(float delta)
+    {
+        var oldVolume = Device.Volume;
+        Device.Volume += delta;
+        if (Device.Volume != oldVolume)
+        {
+            VolumeToastService.ShowDevice(Device, GetContainingScreen());
+        }
+    }
+
+    private System.Windows.Forms.Screen GetContainingScreen()
+    {
+        var window = Window.GetWindow(this);
+        return window == null
+            ? System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position)
+            : System.Windows.Forms.Screen.FromHandle(window.GetHandle());
     }
 
     private static void DeviceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

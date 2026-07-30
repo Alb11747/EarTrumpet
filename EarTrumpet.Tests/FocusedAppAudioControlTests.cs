@@ -21,6 +21,9 @@ internal static class FocusedAppAudioControlTests
         yield return ("Leaf placeholders retain volume and mute changes", UpdatesPlaceholders);
         yield return ("Empty targets are harmless", HandlesEmptyTargets);
         yield return ("Volume changes use a snapshot of target streams", SnapshotsTargets);
+        yield return ("Toast changes report the parent even when its first stream is clamped", ReportsChangedParents);
+        yield return ("Mute toast reports only changed parent groups and the requested state", ReportsMuteChanges);
+        yield return ("Toast representative selection prefers the default device then stable IDs", SelectsRepresentative);
     }
 
     private static void PreservesLevels()
@@ -129,6 +132,58 @@ internal static class FocusedAppAudioControlTests
         Check.Equal(8f, second.Volume);
     }
 
+    private static void ReportsChangedParents()
+    {
+        var quieter = new TestApp(10);
+        var changedGroup = Group(Group(new TestApp(100), quieter));
+        var unchangedGroup = Group(Group(new TestApp(100)));
+        var changed = FocusedAppAudioControl.ChangeVolume(new[] { unchangedGroup, changedGroup }, 7, 0, 100);
+        Check.SequenceEqual(new[] { changedGroup }, changed);
+        Check.Equal(17f, quieter.Volume);
+        Check.Equal(100f, changedGroup.Volume);
+
+        // The toast's absolute slider must still address the parent, not just one leaf.
+        changed[0].Volume = 35;
+        Check.Equal(35f, quieter.Volume);
+        Check.Equal(35f, changedGroup.Volume);
+        Check.Equal(0, FocusedAppAudioControl.ChangeVolume(new[] { unchangedGroup }, 7, 0, 100).Count);
+    }
+
+    private static void ReportsMuteChanges()
+    {
+        var mixed = Group(Group(new TestApp(50) { IsMuted = true }, new TestApp(10)));
+        var muted = Group(Group(new TestApp(70) { IsMuted = true }));
+        var (changed, isMuted) = FocusedAppAudioControl.ToggleMute(new[] { muted, mixed });
+        Check.True(isMuted);
+        Check.SequenceEqual(new[] { mixed }, changed);
+        var unmute = FocusedAppAudioControl.ToggleMute(new[] { muted, mixed });
+        Check.True(!unmute.IsMuted);
+        Check.SequenceEqual(new[] { muted, mixed }, unmute.ChangedApps);
+        Check.Equal(0, FocusedAppAudioControl.ToggleMute(Array.Empty<IAppItemViewModel>()).ChangedApps.Count);
+    }
+
+    private static void SelectsRepresentative()
+    {
+        var preferred = Group(new TestApp(40));
+        preferred.Parent = new TestDevice("z-default");
+        var other = Group(new TestApp(60));
+        other.Parent = new TestDevice("a-other");
+        var later = Group(new TestApp(80));
+        later.Parent = other.Parent;
+        later.Id = "z-session";
+        foreach (var groups in new[] { new[] { later, other, preferred }, new[] { preferred, other, later } })
+        {
+            Check.Equal(preferred, FocusedAppAudioControl.GetRepresentativeApp(groups, "z-default"));
+            Check.Equal(other, FocusedAppAudioControl.GetRepresentativeApp(groups, "missing"));
+        }
+        Check.Equal<IAppItemViewModel>(null, FocusedAppAudioControl.GetRepresentativeApp(Array.Empty<IAppItemViewModel>(), null));
+    }
+
+    private sealed class TestDevice(string id) : IDeviceViewModel
+    {
+        public string Id => id;
+    }
+
     private static TestApp Group(params IAppItemViewModel[] children) => new(0)
     {
         ChildApps = new ObservableCollection<IAppItemViewModel>(children),
@@ -166,7 +221,7 @@ internal static class FocusedAppAudioControlTests
                 else _muted = value;
             }
         }
-        public string Id => "session";
+        public string Id { get; set; } = "session";
         public string AppId => "app";
         public string DisplayName => "Test app";
         public string ExeName => AppId;
@@ -181,7 +236,7 @@ internal static class FocusedAppAudioControlTests
         public float PeakValue2 => 0;
         public string PersistedOutputDevice => null;
         public uint ProcessId => 0;
-        public IDeviceViewModel Parent => null;
+        public IDeviceViewModel Parent { get; set; }
         public bool DoesGroupWith(IAppItemViewModel app) => AppId == app.AppId;
         public void MoveToDevice(string id, bool hide) => throw new NotSupportedException();
         public void UpdatePeakValueForeground() { }

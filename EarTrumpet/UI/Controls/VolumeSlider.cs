@@ -52,6 +52,7 @@ public class VolumeSlider : Slider
         Unloaded += OnUnloaded;
 
         App.Settings.UseLogarithmicVolumeChanged += UseLogarithmicVolumeChangedHandler;
+        UpdateVolumeRange();
     }
 
     private void UseLogarithmicVolumeChangedHandler(object sender, EventArgs e)

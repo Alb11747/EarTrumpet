@@ -217,7 +217,9 @@ internal class AudioDeviceSession : BindableBase, IAudioSessionEvents, IAudioDev
     }
 
     public float GetVolumeScalar() => _volume;
-    public float GetVolumeLogarithmic() => _volume.LinearToLog();
+    public float GetVolumeLogarithmic() => !float.IsFinite(_volume) || _volume <= 0
+        ? App.Settings.LogarithmicVolumeMinDb
+        : _volume.LinearToLog().Bound(App.Settings.LogarithmicVolumeMinDb, 0);
 
     public void SetVolumeScalar(float value)
     {
@@ -229,12 +231,17 @@ internal class AudioDeviceSession : BindableBase, IAudioSessionEvents, IAudioDev
 
     public void SetVolumeLogarithmic(float value)
     {
+        if (!float.IsFinite(value))
+        {
+            value = App.Settings.LogarithmicVolumeMinDb;
+        }
+
         value = value.Bound(App.Settings.LogarithmicVolumeMinDb, 0);
         // We must convert manually here because sessions use linear volume.
-        var scalar = value.LogToLinear();
-        _simpleVolume.SetMasterVolume(scalar, Guid.Empty);
+        var scalarValue = value.LogToLinear();
+        _simpleVolume.SetMasterVolume(scalarValue, Guid.Empty);
         // Keep readback consistent before Core Audio's asynchronous callback arrives.
-        _volume = scalar;
+        _volume = scalarValue;
         IsMuted = value <= App.Settings.LogarithmicVolumeMinDb;
     }
 
