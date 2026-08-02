@@ -469,7 +469,8 @@ public sealed partial class App : IDisposable
 
     private IEnumerable<IAppItemViewModel> GetFocusedApps()
     {
-        var foregroundAppIds = ForegroundAppResolver.TryGetForegroundAppIds();
+        var foregroundAppIds = ForegroundAppResolver.TryGetForegroundAppIds(
+            CollectionViewModel.AllDevices.SelectMany(device => device.AudioSessions));
         if (foregroundAppIds.Count == 0)
         {
             return Enumerable.Empty<IAppItemViewModel>();

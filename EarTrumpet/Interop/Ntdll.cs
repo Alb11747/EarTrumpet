@@ -24,6 +24,8 @@ internal class Ntdll
         /* ... */
         [FieldOffset(68)]
         public int UniqueProcessId;
+        [FieldOffset(72)]
+        public int InheritedFromUniqueProcessId;
         /* ... */
     }
 #elif X64 || ARM64
@@ -38,6 +40,8 @@ internal class Ntdll
         /* ... */
         [FieldOffset(80)]
         public int UniqueProcessId;
+        [FieldOffset(88)]
+        public int InheritedFromUniqueProcessId;
         /* ... */
     }
 #else
