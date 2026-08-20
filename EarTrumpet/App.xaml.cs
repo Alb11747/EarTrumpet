@@ -60,7 +60,7 @@ public sealed partial class App : IDisposable
 
     private static readonly Stopwatch s_appTimer = Stopwatch.StartNew();
     private static readonly GridLength s_linearVolumeCellWidth = new(63);
-    private static readonly GridLength s_logarithmicVolumeCellWidth = new(104);
+    private static readonly GridLength s_logarithmicVolumeCellWidth = new(96);
     private static readonly GridLength s_linearToastVolumeCellWidth = new(54);
     private static readonly GridLength s_logarithmicToastVolumeCellWidth = new(90);
     private FlyoutViewModel _flyoutViewModel;

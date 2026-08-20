@@ -73,7 +73,7 @@
                             <Button.Content>
                                 <Grid>
                                     <TextBlock Theme:Brush.Foreground="{Binding (Theme:Brush.Foreground), RelativeSource={RelativeSource AncestorType=Button}}"
-                                               FontSize="{DynamicResource Mutable_DeviceVolumeTextFontSize}"
+                                               FontSize="{DynamicResource Mutable_DeviceVolumeGlyphFontSize}"
                                                Opacity="0.4">
                                         <TextBlock.Style>
                                             <Style BasedOn="{StaticResource GlyphTextBlockStyle}" TargetType="{x:Type TextBlock}">
@@ -89,7 +89,7 @@
                                             </Style>
                                         </TextBlock.Style>
                                     </TextBlock>
-                                    <TextBlock Theme:Brush.Foreground="{Binding (Theme:Brush.Foreground), RelativeSource={RelativeSource AncestorType=Button}}" FontSize="{DynamicResource Mutable_DeviceVolumeTextFontSize}">
+                                    <TextBlock Theme:Brush.Foreground="{Binding (Theme:Brush.Foreground), RelativeSource={RelativeSource AncestorType=Button}}" FontSize="{DynamicResource Mutable_DeviceVolumeGlyphFontSize}">
                                         <TextBlock.Style>
                                             <Style BasedOn="{StaticResource GlyphTextBlockStyle}" TargetType="{x:Type TextBlock}">
                                                 <Style.Triggers>
