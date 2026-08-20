@@ -294,28 +294,5 @@ namespace EarTrumpet.DataModel.Audio
             return group;
         }
 
-        public static IAudioDeviceSession FindForegroundApp(IEnumerable<IAudioDevice> devices)
-        {
-            var deviceSnapshot = devices?.Where(device => device != null).ToArray() ?? Array.Empty<IAudioDevice>();
-            var groupSnapshot = deviceSnapshot.SelectMany(device => device.Groups).ToArray();
-            var foregroundAppIds = TryGetForegroundAppIds(groupSnapshot);
-            if (foregroundAppIds.Count == 0)
-            {
-                return null;
-            }
-
-            foreach (var device in deviceSnapshot)
-            {
-                var group = device.Groups.FirstOrDefault(candidate => foregroundAppIds.Contains(candidate.AppId));
-                if (group != null)
-                {
-                    Trace.WriteLine($"ForegroundAppResolver: {group.DisplayName}");
-                    return group;
-                }
-            }
-
-            Trace.WriteLine("ForegroundAppResolver: Didn't locate foreground app");
-            return null;
-        }
     }
 }
