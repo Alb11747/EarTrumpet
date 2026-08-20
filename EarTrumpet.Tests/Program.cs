@@ -12,6 +12,7 @@ internal static class Program
         var failures = 0;
         var cases = FocusedAppAudioControlTests.Cases()
             .Concat(ForegroundAppResolverTests.Cases())
+            .Concat(VolumeHotkeySettingsTests.Cases())
             .Concat(AudioDeviceSessionVolumeTests.Cases()).ToArray();
         foreach (var (name, test) in cases)
         {

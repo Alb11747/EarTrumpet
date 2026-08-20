@@ -65,8 +65,6 @@ public sealed partial class App : IDisposable
     private static readonly GridLength s_logarithmicToastVolumeCellWidth = new(90);
     private FlyoutViewModel _flyoutViewModel;
 
-    private const float c_focusedAppLinearVolumeStep = 2f;
-    private const float c_focusedAppLogarithmicVolumeStepDb = 0.5f;
     private ShellNotifyIcon _trayIcon;
     private WindowHolder _mixerWindow;
     private WindowHolder _settingsWindow;
@@ -458,12 +456,13 @@ public sealed partial class App : IDisposable
 
     private void AbsoluteVolumeIncrement()
     {
+        var step = GetVolumeHotkeyStep();
         var changedDevices = new List<DeviceViewModel>();
         foreach (var device in CollectionViewModel.AllDevices.Where(d => !d.IsMuted || d.IsAbsMuted).ToArray())
         {
             var oldVolume = device.Volume;
             device.IsAbsMuted = false;
-            device.IncrementVolume(2);
+            device.IncrementVolume(step);
             if (device.Volume != oldVolume)
             {
                 changedDevices.Add(device);
@@ -479,13 +478,14 @@ public sealed partial class App : IDisposable
 
     private void AbsoluteVolumeDecrement()
     {
+        var step = GetVolumeHotkeyStep();
         var changedDevices = new List<DeviceViewModel>();
         var minimum = Settings.UseLogarithmicVolume ? Settings.LogarithmicVolumeMinDb : 0f;
         foreach (var device in CollectionViewModel.AllDevices.Where(d => !d.IsMuted).ToArray())
         {
             var wasMuted = device.IsMuted;
             var oldVolume = device.Volume;
-            device.Volume -= 2;
+            device.Volume -= step;
 
             if (!wasMuted == (device.Volume <= minimum))
             {
@@ -507,17 +507,17 @@ public sealed partial class App : IDisposable
 
     private void FocusedAppVolumeIncrement()
     {
-        ChangeFocusedAppVolume(GetFocusedAppVolumeStep());
+        ChangeFocusedAppVolume(GetVolumeHotkeyStep());
     }
 
     private void FocusedAppVolumeDecrement()
     {
-        ChangeFocusedAppVolume(-GetFocusedAppVolumeStep());
+        ChangeFocusedAppVolume(-GetVolumeHotkeyStep());
     }
 
-    private static float GetFocusedAppVolumeStep() => Settings.UseLogarithmicVolume
-        ? c_focusedAppLogarithmicVolumeStepDb
-        : c_focusedAppLinearVolumeStep;
+    private static float GetVolumeHotkeyStep() => Settings.UseLogarithmicVolume
+        ? Settings.LogarithmicVolumeHotkeyStepDb
+        : Settings.LinearVolumeHotkeyStep;
 
     private void ChangeFocusedAppVolume(float delta)
     {

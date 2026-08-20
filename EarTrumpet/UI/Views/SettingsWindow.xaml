@@ -210,10 +210,42 @@
                                Style="{StaticResource BodySubText}"
                                Text="{x:Static resx:Resources.HotkeyDescriptionText}" />
                     <ContentControl Grid.Row="1"
-                                    Grid.Column="1"
-                                    Content="{Binding FocusedAppVolumeDownHotkey}"
-                                    IsTabStop="False" />
+                                     Grid.Column="1"
+                                     Content="{Binding FocusedAppVolumeDownHotkey}"
+                                     IsTabStop="False" />
                 </Grid>
+                <TextBlock Style="{StaticResource BodyText}"
+                           Text="{x:Static resx:Resources.SettingsLinearVolumeHotkeyStepText}" />
+                <StackPanel Margin="12,0,0,0"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Bottom"
+                            Orientation="Horizontal">
+                    <Slider Width="200"
+                            Minimum="1"
+                            Maximum="20"
+                            IsSnapToTickEnabled="True"
+                            TickFrequency="1"
+                            Value="{Binding LinearVolumeHotkeyStep, Mode=TwoWay}" />
+                    <TextBlock VerticalAlignment="Center"
+                               Style="{StaticResource BodyText}"
+                               Text="{Binding LinearVolumeHotkeyStep, StringFormat=\{0:0\}}" />
+                </StackPanel>
+                <TextBlock Style="{StaticResource BodyText}"
+                           Text="{x:Static resx:Resources.SettingsLogarithmicVolumeHotkeyStepText}" />
+                <StackPanel Margin="12,0,0,0"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Bottom"
+                            Orientation="Horizontal">
+                    <Slider Width="200"
+                            Minimum="0.1"
+                            Maximum="10"
+                            IsSnapToTickEnabled="True"
+                            TickFrequency="0.1"
+                            Value="{Binding LogarithmicVolumeHotkeyStepDb, Mode=TwoWay}" />
+                    <TextBlock VerticalAlignment="Center"
+                               Style="{StaticResource BodyText}"
+                               Text="{Binding LogarithmicVolumeHotkeyStepDb, StringFormat=\{0:0.0\} dB}" />
+                </StackPanel>
                 <TextBlock Style="{StaticResource BodyText}" Text="{x:Static resx:Resources.SettingsFocusedAppToggleMuteText}" />
                 <Grid>
                     <Grid.RowDefinitions>

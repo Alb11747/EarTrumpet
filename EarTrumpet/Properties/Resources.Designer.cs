@@ -1406,6 +1406,24 @@ namespace EarTrumpet.Properties {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Volume shortcut step (1–100).
+        /// </summary>
+        public static string SettingsLinearVolumeHotkeyStepText {
+            get {
+                return ResourceManager.GetString("SettingsLinearVolumeHotkeyStepText", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Volume shortcut step (dB).
+        /// </summary>
+        public static string SettingsLogarithmicVolumeHotkeyStepText {
+            get {
+                return ResourceManager.GetString("SettingsLogarithmicVolumeHotkeyStepText", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Toggle mute for the focused app.
         /// </summary>
         public static string SettingsFocusedAppToggleMuteText {

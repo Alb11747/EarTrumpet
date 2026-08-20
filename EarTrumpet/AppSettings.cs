@@ -9,6 +9,13 @@ namespace EarTrumpet;
 
 public class AppSettings
 {
+    private const int c_defaultLinearVolumeHotkeyStep = 2;
+    private const int c_minimumLinearVolumeHotkeyStep = 1;
+    private const int c_maximumLinearVolumeHotkeyStep = 20;
+    private const float c_defaultLogarithmicVolumeHotkeyStepDb = 0.5f;
+    private const float c_minimumLogarithmicVolumeHotkeyStepDb = 0.1f;
+    private const float c_maximumLogarithmicVolumeHotkeyStepDb = 10f;
+
     public event EventHandler<bool> UseLegacyIconChanged;
     public event EventHandler<EventArgs> UseLogarithmicVolumeChanged;
     public event Action FlyoutHotkeyTyped;
@@ -164,6 +171,24 @@ public class AppSettings
             _settings.Set("FocusedAppToggleMuteHotkey", value);
             HotkeyManager.Current.Register(FocusedAppToggleMuteHotkey);
         }
+    }
+
+    public int LinearVolumeHotkeyStep
+    {
+        get => Math.Clamp(
+            _settings.Get("LinearVolumeHotkeyStep", c_defaultLinearVolumeHotkeyStep),
+            c_minimumLinearVolumeHotkeyStep,
+            c_maximumLinearVolumeHotkeyStep);
+        set => _settings.Set(
+            "LinearVolumeHotkeyStep",
+            Math.Clamp(value, c_minimumLinearVolumeHotkeyStep, c_maximumLinearVolumeHotkeyStep));
+    }
+
+    public float LogarithmicVolumeHotkeyStepDb
+    {
+        get => NormalizeLogarithmicVolumeHotkeyStepDb(
+            _settings.Get("LogarithmicVolumeHotkeyStepDb", c_defaultLogarithmicVolumeHotkeyStepDb));
+        set => _settings.Set("LogarithmicVolumeHotkeyStepDb", NormalizeLogarithmicVolumeHotkeyStepDb(value));
     }
 
     public bool UseLegacyIcon
@@ -349,5 +374,18 @@ public class AppSettings
         };
         var region = new Windows.Globalization.GeographicRegion();
         return !europeanUnionRegions.Contains(region.CodeTwoLetter);
+    }
+
+    private static float NormalizeLogarithmicVolumeHotkeyStepDb(float value)
+    {
+        if (!float.IsFinite(value))
+        {
+            return c_defaultLogarithmicVolumeHotkeyStepDb;
+        }
+
+        return Math.Clamp(
+            MathF.Round(value, 1),
+            c_minimumLogarithmicVolumeHotkeyStepDb,
+            c_maximumLogarithmicVolumeHotkeyStepDb);
     }
 }
