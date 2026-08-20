@@ -14,7 +14,8 @@
     <bcl:Double x:Key="Mutable_DeviceItemCellHeight">54</bcl:Double>
     <bcl:Double x:Key="Mutable_ExpandCollapseButtonGlyphFontSize">12</bcl:Double>
     <bcl:Double x:Key="Mutable_AppVolumeTextFontSize">18</bcl:Double>
-    <bcl:Double x:Key="Mutable_DeviceVolumeTextFontSize">24</bcl:Double>
+    <bcl:Double x:Key="Mutable_DeviceVolumeTextFontSize">20</bcl:Double>
+    <bcl:Double x:Key="Mutable_DeviceVolumeGlyphFontSize">24</bcl:Double>
     <bcl:Double x:Key="Mutable_LargeWindowTextFontSize">15</bcl:Double>
     <bcl:Double x:Key="Mutable_AppIconTextFontSize">16</bcl:Double>
 </ResourceDictionary>
