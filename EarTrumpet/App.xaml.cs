@@ -58,7 +58,8 @@ public sealed partial class App : IDisposable
     private static readonly Stopwatch s_appTimer = Stopwatch.StartNew();
     private FlyoutViewModel _flyoutViewModel;
 
-    private const int c_focusedAppVolumeStep = 2;
+    private const float c_focusedAppLinearVolumeStep = 2f;
+    private const float c_focusedAppLogarithmicVolumeStepDb = 0.5f;
     private ShellNotifyIcon _trayIcon;
     private WindowHolder _mixerWindow;
     private WindowHolder _settingsWindow;
@@ -436,19 +437,27 @@ public sealed partial class App : IDisposable
 
     private void FocusedAppVolumeIncrement()
     {
-        ChangeFocusedAppVolume(c_focusedAppVolumeStep);
+        ChangeFocusedAppVolume(GetFocusedAppVolumeStep());
     }
 
     private void FocusedAppVolumeDecrement()
     {
-        ChangeFocusedAppVolume(-c_focusedAppVolumeStep);
+        ChangeFocusedAppVolume(-GetFocusedAppVolumeStep());
     }
 
-    private void ChangeFocusedAppVolume(int delta)
+    private static float GetFocusedAppVolumeStep() => Settings.UseLogarithmicVolume
+        ? c_focusedAppLogarithmicVolumeStepDb
+        : c_focusedAppLinearVolumeStep;
+
+    private void ChangeFocusedAppVolume(float delta)
     {
+        var minimum = Settings.UseLogarithmicVolume ? Settings.LogarithmicVolumeMinDb : 0f;
+        var maximum = Settings.UseLogarithmicVolume ? 0f : 100f;
+
         foreach (var app in GetFocusedApps())
         {
-            app.Volume = Math.Max(0, Math.Min(100, app.Volume + delta));
+            var currentVolume = float.IsFinite(app.Volume) ? app.Volume : minimum;
+            app.Volume = Math.Clamp(currentVolume + delta, minimum, maximum);
         }
     }
 
