@@ -1,5 +1,7 @@
 ﻿using EarTrumpet.Interop.Helpers;
 
+using System;
+
 namespace EarTrumpet.UI.ViewModels;
 
 internal class EarTrumpetShortcutsPageViewModel : SettingsPageViewModel
@@ -30,8 +32,39 @@ internal class EarTrumpetShortcutsPageViewModel : SettingsPageViewModel
     public HotkeyViewModel FocusedAppToggleMuteHotkey { get; }
     public static string DefaultFocusedAppToggleMuteHotkey => s_hotkeyNoneText;
 
+    public double LinearVolumeHotkeyStep
+    {
+        get => _settings.LinearVolumeHotkeyStep;
+        set
+        {
+            var step = (int)Math.Round(value);
+            if (_settings.LinearVolumeHotkeyStep != step)
+            {
+                _settings.LinearVolumeHotkeyStep = step;
+                RaisePropertyChanged(nameof(LinearVolumeHotkeyStep));
+            }
+        }
+    }
+
+    public double LogarithmicVolumeHotkeyStepDb
+    {
+        get => _settings.LogarithmicVolumeHotkeyStepDb;
+        set
+        {
+            var step = Math.Round(value, 1);
+            if (_settings.LogarithmicVolumeHotkeyStepDb != (float)step)
+            {
+                _settings.LogarithmicVolumeHotkeyStepDb = (float)step;
+                RaisePropertyChanged(nameof(LogarithmicVolumeHotkeyStepDb));
+            }
+        }
+    }
+
+    private readonly AppSettings _settings;
+
     public EarTrumpetShortcutsPageViewModel(AppSettings settings) : base(null)
     {
+        _settings = settings;
         Title = Properties.Resources.ShortcutsPageText;
         Glyph = "\xE765";
 

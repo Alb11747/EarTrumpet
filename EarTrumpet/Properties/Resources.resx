@@ -658,6 +658,12 @@ Open [https://eartrumpet.app/jmp/fixstartup] to resolve this?</value>
   <data name="SettingsFocusedAppVolumeUpText" xml:space="preserve">
     <value>Increase volume for the focused app</value>
   </data>
+  <data name="SettingsLinearVolumeHotkeyStepText" xml:space="preserve">
+    <value>Volume shortcut step (1–100)</value>
+  </data>
+  <data name="SettingsLogarithmicVolumeHotkeyStepText" xml:space="preserve">
+    <value>Volume shortcut step (dB)</value>
+  </data>
   <data name="SettingsFocusedAppToggleMuteText" xml:space="preserve">
     <value>Toggle mute for the focused app</value>
   </data>
