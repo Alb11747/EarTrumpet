@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
+using Windows.Win32;
 using Windows.Win32.UI.WindowsAndMessaging;
 using Screen = System.Windows.Forms.Screen;
 
@@ -20,9 +21,23 @@ internal partial class VolumeToastWindow : Window
     private HwndSource _source;
     private Screen _targetScreen;
     private bool _positionPending;
+    private bool _hasInputCapture;
 
     internal event Action<bool> UserActivity;
     internal event Action<bool> HoverChanged;
+    internal event Action<bool> InputCaptureChanged;
+
+    internal bool HasInputCapture => IsMouseCaptureWithin || AreAnyTouchesCapturedWithin;
+
+    internal unsafe bool ContainsScreenPoint(int x, int y)
+    {
+        // Mouse-hook coordinates and GetWindowRect are physical screen pixels.
+        // Query the existing source so checking a hidden toast never creates a window.
+        var handle = _source?.Handle ?? IntPtr.Zero;
+        return IsVisible && handle != IntPtr.Zero &&
+            PInvoke.GetWindowRect(new HWND(handle.ToPointer()), out var bounds) &&
+            x >= bounds.left && x < bounds.right && y >= bounds.top && y < bounds.bottom;
+    }
 
     public VolumeToastWindow()
     {
@@ -126,6 +141,27 @@ internal partial class VolumeToastWindow : Window
         HoverChanged?.Invoke(true);
     }
 
+    protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        // Capture-within properties include every descendant and touch device,
+        // even when a control handles the routed capture event itself.
+        if (e.Property == IsMouseCaptureWithinProperty || e.Property == AreAnyTouchesCapturedWithinProperty)
+        {
+            NotifyInputCaptureChanged();
+        }
+    }
+
+    private void NotifyInputCaptureChanged()
+    {
+        var hasInputCapture = HasInputCapture;
+        if (_hasInputCapture != hasInputCapture)
+        {
+            _hasInputCapture = hasInputCapture;
+            InputCaptureChanged?.Invoke(hasInputCapture);
+        }
+    }
+
     private void Window_MouseLeave(object sender, MouseEventArgs e)
     {
         HoverChanged?.Invoke(false);
@@ -190,5 +226,7 @@ internal partial class VolumeToastWindow : Window
         _targetScreen = null;
         UserActivity = null;
         HoverChanged = null;
+        InputCaptureChanged = null;
+        _hasInputCapture = false;
     }
 }

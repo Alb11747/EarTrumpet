@@ -322,6 +322,13 @@ public class FlyoutViewModel : BindableBase, IPopupHostViewModel, IFlyoutViewMod
 
     private int OnMouseWheelEvent(object sender, System.Windows.Forms.MouseEventArgs e)
     {
+        // The toast is a separate, non-activating window outside the flyout rectangle.
+        // Let its controls receive wheel input instead of changing the default device.
+        if (VolumeToastService.ContainsScreenPoint(e.X, e.Y))
+        {
+            return 0;
+        }
+
         var existing = _mainViewModel.Default;
         if (existing != null)
         {

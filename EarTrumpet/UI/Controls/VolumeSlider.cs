@@ -38,6 +38,7 @@ public class VolumeSlider : Slider
     private Border _peakMeter2;
     private Thumb _thumb;
     private Point _lastMousePosition;
+    private AppSettings _subscribedSettings;
 
     public VolumeSlider() : base()
     {
@@ -51,7 +52,6 @@ public class VolumeSlider : Slider
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
 
-        App.Settings.UseLogarithmicVolumeChanged += UseLogarithmicVolumeChangedHandler;
         UpdateVolumeRange();
     }
 
@@ -63,6 +63,12 @@ public class VolumeSlider : Slider
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        if (_subscribedSettings == null)
+        {
+            _subscribedSettings = App.Settings;
+            _subscribedSettings.UseLogarithmicVolumeChanged += UseLogarithmicVolumeChangedHandler;
+        }
+
         _thumb = (Thumb)GetTemplateChild("SliderThumb");
         _peakMeter1 = (Border)GetTemplateChild("PeakMeter1");
         _peakMeter2 = (Border)GetTemplateChild("PeakMeter2");
@@ -71,7 +77,11 @@ public class VolumeSlider : Slider
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        App.Settings.UseLogarithmicVolumeChanged -= UseLogarithmicVolumeChangedHandler;
+        if (_subscribedSettings != null)
+        {
+            _subscribedSettings.UseLogarithmicVolumeChanged -= UseLogarithmicVolumeChangedHandler;
+            _subscribedSettings = null;
+        }
     }
 
     protected override Size ArrangeOverride(Size arrangeBounds)

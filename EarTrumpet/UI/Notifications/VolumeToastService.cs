@@ -8,13 +8,12 @@ namespace EarTrumpet.UI.Notifications;
 
 internal static class VolumeToastService
 {
-    private static readonly TimeSpan s_defaultDisplayDuration = TimeSpan.FromSeconds(2);
-    private static readonly TimeSpan s_interactedDisplayDuration = TimeSpan.FromSeconds(5);
+    private static readonly VolumeToastLifetime s_lifetime = new();
     private static VolumeToastWindow s_window;
     private static DispatcherTimer s_hideTimer;
-    private static bool s_hasInteracted;
-    private static bool s_isPointerOver;
     private static bool s_isShuttingDown;
+
+    public static bool ContainsScreenPoint(int x, int y) => s_window?.ContainsScreenPoint(x, y) == true;
 
     public static void ShowDevice(DeviceViewModel device, Screen screen, bool? isMuted = null)
     {
@@ -91,13 +90,13 @@ internal static class VolumeToastService
             s_window = new VolumeToastWindow();
             s_window.UserActivity += Window_UserActivity;
             s_window.HoverChanged += Window_HoverChanged;
+            s_window.InputCaptureChanged += Window_InputCaptureChanged;
             s_window.Closed += Window_Closed;
         }
 
         s_hideTimer ??= CreateHideTimer(dispatcher);
 
-        s_hasInteracted = false;
-        s_isPointerOver = s_window.IsMouseOver;
+        s_lifetime.Reset(s_window.IsMouseOver, s_window.HasInputCapture);
         s_window.SetVolume(viewModel);
         if (!s_window.IsVisible)
         {
@@ -132,23 +131,28 @@ internal static class VolumeToastService
         }
 
         s_hideTimer.Stop();
-        s_hideTimer.Interval = s_hasInteracted ? s_interactedDisplayDuration : s_defaultDisplayDuration;
-
-        if (!s_isPointerOver)
+        if (s_window?.IsVisible == true && s_lifetime.HideDelay is TimeSpan delay)
         {
+            s_hideTimer.Interval = delay;
             s_hideTimer.Start();
         }
     }
 
     private static void Window_UserActivity(bool isInteraction)
     {
-        s_hasInteracted |= isInteraction;
+        s_lifetime.RecordActivity(isInteraction);
         RestartHideTimer();
     }
 
     private static void Window_HoverChanged(bool isPointerOver)
     {
-        s_isPointerOver = isPointerOver;
+        s_lifetime.SetPointerOver(isPointerOver);
+        RestartHideTimer();
+    }
+
+    private static void Window_InputCaptureChanged(bool hasInputCapture)
+    {
+        s_lifetime.SetInputCapture(hasInputCapture);
         RestartHideTimer();
     }
 
@@ -156,9 +160,10 @@ internal static class VolumeToastService
     {
         s_hideTimer?.Stop();
 
-        if (s_window?.IsMouseOver == true)
+        s_lifetime.SetPointerOver(s_window?.IsMouseOver == true);
+        s_lifetime.SetInputCapture(s_window?.HasInputCapture == true);
+        if (s_lifetime.HideDelay == null)
         {
-            s_isPointerOver = true;
             return;
         }
 
@@ -170,8 +175,7 @@ internal static class VolumeToastService
         s_hideTimer?.Stop();
         s_window?.Hide();
         s_window?.ClearVolume();
-        s_hasInteracted = false;
-        s_isPointerOver = false;
+        s_lifetime.Reset();
     }
 
     private static void Window_Closed(object sender, EventArgs e)
@@ -180,6 +184,7 @@ internal static class VolumeToastService
         {
             s_window.UserActivity -= Window_UserActivity;
             s_window.HoverChanged -= Window_HoverChanged;
+            s_window.InputCaptureChanged -= Window_InputCaptureChanged;
             s_window.Closed -= Window_Closed;
             s_window = null;
         }
@@ -191,8 +196,7 @@ internal static class VolumeToastService
             s_hideTimer = null;
         }
 
-        s_hasInteracted = false;
-        s_isPointerOver = false;
+        s_lifetime.Reset();
     }
 
     private static void ShutdownCore()
@@ -208,12 +212,12 @@ internal static class VolumeToastService
         {
             s_window.UserActivity -= Window_UserActivity;
             s_window.HoverChanged -= Window_HoverChanged;
+            s_window.InputCaptureChanged -= Window_InputCaptureChanged;
             s_window.Closed -= Window_Closed;
             s_window.Close();
             s_window = null;
         }
 
-        s_hasInteracted = false;
-        s_isPointerOver = false;
+        s_lifetime.Reset();
     }
 }
