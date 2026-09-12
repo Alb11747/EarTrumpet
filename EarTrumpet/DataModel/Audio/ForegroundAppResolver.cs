@@ -13,6 +13,18 @@ namespace EarTrumpet.DataModel.Audio
 {
     public static class ForegroundAppResolver
     {
+        internal readonly struct ProcessSnapshotEntry
+        {
+            public uint ParentProcessId { get; }
+            public long CreationTime { get; }
+
+            public ProcessSnapshotEntry(uint parentProcessId, long creationTime)
+            {
+                ParentProcessId = parentProcessId;
+                CreationTime = creationTime;
+            }
+        }
+
         internal readonly struct SessionCandidate
         {
             public uint ProcessId { get; }
@@ -46,7 +58,7 @@ namespace EarTrumpet.DataModel.Audio
                 .ToArray();
             var activeDescendantAppIds = GetActiveDescendantAppIds(
                 foregroundProcessId,
-                TryGetParentProcessIds(),
+                TryGetProcessSnapshot(),
                 candidates);
 
             if (activeDescendantAppIds.Count == 1)
@@ -131,7 +143,7 @@ namespace EarTrumpet.DataModel.Audio
             return true;
         }
 
-        private static IEnumerable<SessionCandidate> EnumerateSessionCandidates(IEnumerable<IAudioDeviceSession> groups)
+        internal static IEnumerable<SessionCandidate> EnumerateSessionCandidates(IEnumerable<IAudioDeviceSession> groups)
         {
             if (groups == null)
             {
@@ -140,27 +152,40 @@ namespace EarTrumpet.DataModel.Audio
 
             foreach (var group in groups.Where(group => group != null).ToArray())
             {
-                var sessions = group.Children?.ToArray();
-                if (sessions?.Length > 0)
+                foreach (var candidate in EnumerateSessionCandidates(group, group.AppId))
                 {
-                    foreach (var session in sessions.Where(session => session != null))
+                    yield return candidate;
+                }
+            }
+        }
+
+        private static IEnumerable<SessionCandidate> EnumerateSessionCandidates(IAudioDeviceSession session, string appId)
+        {
+            var children = session.Children?.ToArray();
+            if (children?.Length > 0)
+            {
+                // Both app groups and grouping-parameter groups aggregate state and borrow
+                // the first child's process ID. Only leaves describe an actual stream.
+                foreach (var child in children.Where(child => child != null))
+                {
+                    foreach (var candidate in EnumerateSessionCandidates(child, appId))
                     {
-                        yield return new SessionCandidate(session.ProcessId, group.AppId, session.State);
+                        yield return candidate;
                     }
                 }
-                else
-                {
-                    yield return new SessionCandidate(group.ProcessId, group.AppId, group.State);
-                }
+            }
+            else
+            {
+                yield return new SessionCandidate(session.ProcessId, appId, session.State);
             }
         }
 
         internal static IReadOnlyList<string> GetActiveDescendantAppIds(
             uint foregroundProcessId,
-            IReadOnlyDictionary<uint, uint> parentProcessIds,
+            IReadOnlyDictionary<uint, ProcessSnapshotEntry> processes,
             IEnumerable<SessionCandidate> candidates)
         {
-            if (foregroundProcessId == 0 || parentProcessIds == null || candidates == null)
+            if (foregroundProcessId == 0 || processes == null || candidates == null)
             {
                 return Array.Empty<string>();
             }
@@ -168,7 +193,7 @@ namespace EarTrumpet.DataModel.Audio
             return candidates
                 .Where(candidate => candidate.State == SessionState.Active &&
                                     !string.IsNullOrWhiteSpace(candidate.AppId) &&
-                                    IsStrictDescendant(candidate.ProcessId, foregroundProcessId, parentProcessIds))
+                                    IsStrictDescendant(candidate.ProcessId, foregroundProcessId, processes))
                 .Select(candidate => candidate.AppId)
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(appId => appId, StringComparer.Ordinal)
@@ -178,7 +203,7 @@ namespace EarTrumpet.DataModel.Audio
         private static bool IsStrictDescendant(
             uint processId,
             uint ancestorProcessId,
-            IReadOnlyDictionary<uint, uint> parentProcessIds)
+            IReadOnlyDictionary<uint, ProcessSnapshotEntry> processes)
         {
             if (processId == 0 || processId == ancestorProcessId)
             {
@@ -189,23 +214,31 @@ namespace EarTrumpet.DataModel.Audio
             var currentProcessId = processId;
             while (currentProcessId != 0 && visitedProcessIds.Add(currentProcessId))
             {
-                if (!parentProcessIds.TryGetValue(currentProcessId, out var parentProcessId))
+                if (!processes.TryGetValue(currentProcessId, out var process) ||
+                    !processes.TryGetValue(process.ParentProcessId, out var parent))
                 {
                     return false;
                 }
 
-                if (parentProcessId == ancestorProcessId)
+                // Windows retains the original parent PID after it exits. A newer
+                // process with that reused PID cannot be this process's parent.
+                if (parent.CreationTime > process.CreationTime)
+                {
+                    return false;
+                }
+
+                if (process.ParentProcessId == ancestorProcessId)
                 {
                     return true;
                 }
 
-                currentProcessId = parentProcessId;
+                currentProcessId = process.ParentProcessId;
             }
 
             return false;
         }
 
-        private static IReadOnlyDictionary<uint, uint> TryGetParentProcessIds()
+        private static IReadOnlyDictionary<uint, ProcessSnapshotEntry> TryGetProcessSnapshot()
         {
             const int maxAttempts = 3;
             const int bufferPadding = 64 * 1024;
@@ -221,7 +254,7 @@ namespace EarTrumpet.DataModel.Audio
                 if (status != Ntdll.NTSTATUS.STATUS_INFO_LENGTH_MISMATCH || requiredBufferLength <= 0)
                 {
                     Trace.WriteLine($"ForegroundAppResolver: Failed to size process snapshot ({status})");
-                    return new Dictionary<uint, uint>();
+                    return new Dictionary<uint, ProcessSnapshotEntry>();
                 }
 
                 var bufferLength = requiredBufferLength + bufferPadding;
@@ -241,10 +274,10 @@ namespace EarTrumpet.DataModel.Audio
                     if (status != Ntdll.NTSTATUS.SUCCESS)
                     {
                         Trace.WriteLine($"ForegroundAppResolver: Failed to read process snapshot ({status})");
-                        return new Dictionary<uint, uint>();
+                        return new Dictionary<uint, ProcessSnapshotEntry>();
                     }
 
-                    var parentProcessIds = new Dictionary<uint, uint>();
+                    var processes = new Dictionary<uint, ProcessSnapshotEntry>();
                     var entryPointer = buffer;
                     Ntdll.SYSTEM_PROCESS_INFORMATION processInfo;
                     do
@@ -254,13 +287,13 @@ namespace EarTrumpet.DataModel.Audio
                         var parentProcessId = unchecked((uint)processInfo.InheritedFromUniqueProcessId);
                         if (currentProcessId != 0)
                         {
-                            parentProcessIds[currentProcessId] = parentProcessId;
+                            processes[currentProcessId] = new ProcessSnapshotEntry(parentProcessId, processInfo.CreateTime);
                         }
 
                         entryPointer += processInfo.NextEntryOffset;
                     } while (processInfo.NextEntryOffset != 0);
 
-                    return parentProcessIds;
+                    return processes;
                 }
                 finally
                 {
@@ -269,7 +302,7 @@ namespace EarTrumpet.DataModel.Audio
             }
 
             Trace.WriteLine("ForegroundAppResolver: Process snapshot kept changing; using foreground app");
-            return new Dictionary<uint, uint>();
+            return new Dictionary<uint, ProcessSnapshotEntry>();
         }
 
         public static IAudioDeviceSession FindForegroundApp(ObservableCollection<IAudioDeviceSession> groups)

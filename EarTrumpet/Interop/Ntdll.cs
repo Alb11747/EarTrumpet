@@ -19,6 +19,9 @@ internal class Ntdll
         [FieldOffset(0)]
         public int NextEntryOffset;
         /* ... */
+        [FieldOffset(32)]
+        public long CreateTime;
+        /* ... */
         [FieldOffset(56)]
         public UNICODE_STRING ImageName;
         /* ... */
@@ -34,6 +37,9 @@ internal class Ntdll
     {
         [FieldOffset(0)]
         public int NextEntryOffset;
+        /* ... */
+        [FieldOffset(32)]
+        public long CreateTime;
         /* ... */
         [FieldOffset(56)]
         public UNICODE_STRING ImageName;

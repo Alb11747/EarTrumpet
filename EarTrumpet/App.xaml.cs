@@ -454,26 +454,12 @@ public sealed partial class App : IDisposable
         var minimum = Settings.UseLogarithmicVolume ? Settings.LogarithmicVolumeMinDb : 0f;
         var maximum = Settings.UseLogarithmicVolume ? 0f : 100f;
 
-        foreach (var app in GetFocusedApps())
-        {
-            var currentVolume = float.IsFinite(app.Volume) ? app.Volume : minimum;
-            app.Volume = Math.Clamp(currentVolume + delta, minimum, maximum);
-        }
+        FocusedAppAudioControl.ChangeVolume(GetFocusedApps(), delta, minimum, maximum);
     }
 
     private void FocusedAppToggleMute()
     {
-        var apps = GetFocusedApps().ToArray();
-        if (!apps.Any())
-        {
-            return;
-        }
-
-        var shouldMute = apps.Any(app => !app.IsMuted);
-        foreach (var app in apps)
-        {
-            app.IsMuted = shouldMute;
-        }
+        FocusedAppAudioControl.ToggleMute(GetFocusedApps());
     }
 
     private IEnumerable<IAppItemViewModel> GetFocusedApps()
