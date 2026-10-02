@@ -30,6 +30,15 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <conv:VolumeToStringConverter x:Key="VolumeToStringConverter" />
 
+        <!-- Dim the icon, slider, and value while muted, matching the flyout. -->
+        <Style x:Key="MutedIconStyle" TargetType="Grid">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsMuted}" Value="True">
+                    <Setter Property="Opacity" Value="{StaticResource MutedOpacity}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="ToastButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="32" />
             <Setter Property="Height" Value="32" />
@@ -111,7 +120,8 @@
                   Width="34"
                   Height="34"
                   HorizontalAlignment="Left"
-                  VerticalAlignment="Center">
+                  VerticalAlignment="Center"
+                  Style="{StaticResource MutedIconStyle}">
                 <Grid Visibility="{Binding IsDevice, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <TextBlock FontSize="28"
                                Opacity="0.4"
@@ -196,8 +206,17 @@
                               IsTabStop="False"
                               PeakValue1="0"
                               PeakValue2="0"
-                              Style="{StaticResource {x:Type Slider}}"
-                              Value="{Binding Volume, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                              Value="{Binding Volume, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                <ctl:VolumeSlider.Style>
+                    <Style BasedOn="{StaticResource {x:Type Slider}}" TargetType="Slider">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMuted}" Value="True">
+                                <Setter Property="Opacity" Value="{StaticResource MutedOpacity}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ctl:VolumeSlider.Style>
+            </ctl:VolumeSlider>
 
             <TextBlock Grid.Row="1"
                        Grid.Column="2"
@@ -206,7 +225,17 @@
                        VerticalAlignment="Center"
                        FontSize="18"
                        Text="{Binding Volume, Mode=OneWay, Converter={StaticResource VolumeToStringConverter}}"
-                       Theme:Brush.Foreground="Text" />
+                       Theme:Brush.Foreground="Text">
+                <TextBlock.Style>
+                    <Style BasedOn="{StaticResource {x:Type TextBlock}}" TargetType="TextBlock">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMuted}" Value="True">
+                                <Setter Property="Opacity" Value="{StaticResource MutedOpacity}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
 
             <Button x:Name="MuteButton"
                     Grid.Row="1"
