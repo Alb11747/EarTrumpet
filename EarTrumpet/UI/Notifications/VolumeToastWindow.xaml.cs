@@ -26,6 +26,7 @@ internal partial class VolumeToastWindow : Window
     internal event Action<bool> UserActivity;
     internal event Action<bool> HoverChanged;
     internal event Action<bool> InputCaptureChanged;
+    internal event Action CloseRequested;
 
     internal bool HasInputCapture => IsMouseCaptureWithin || AreAnyTouchesCapturedWithin;
 
@@ -50,6 +51,12 @@ internal partial class VolumeToastWindow : Window
 
     internal void SetVolume(VolumeToastViewModel viewModel)
     {
+        if (DataContext is VolumeToastViewModel current && current.TryRefreshFrom(viewModel))
+        {
+            viewModel.Dispose();
+            return;
+        }
+
         ClearVolume();
         DataContext = viewModel;
     }
@@ -184,7 +191,8 @@ internal partial class VolumeToastWindow : Window
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
-        Close();
+        // Hide instead of closing so the next toast reuses this window.
+        CloseRequested?.Invoke();
     }
 
     private void MuteButton_Click(object sender, RoutedEventArgs e)
@@ -227,6 +235,7 @@ internal partial class VolumeToastWindow : Window
         UserActivity = null;
         HoverChanged = null;
         InputCaptureChanged = null;
+        CloseRequested = null;
         _hasInputCapture = false;
     }
 }

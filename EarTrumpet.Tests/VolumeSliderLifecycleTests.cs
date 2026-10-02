@@ -107,7 +107,7 @@ internal static class VolumeSliderLifecycleTests
         }
     }
 
-    private sealed class MemorySettings : ISettingsBag
+    internal sealed class MemorySettings : ISettingsBag
     {
         private readonly Dictionary<string, object> _values = new();
         public string Namespace => "";

@@ -80,6 +80,20 @@ internal sealed class VolumeToastViewModel : BindableBase, IDisposable
     public static VolumeToastViewModel FromDevice(DeviceViewModel device, bool? isMuted = null) => new(device, isMuted);
     public static VolumeToastViewModel FromApp(IAppItemViewModel app, bool? isMuted = null) => new(app, isMuted);
 
+    // Repeated changes to the displayed target update this instance in place, so held
+    // shortcuts do not rebind the window or reload the app icon on every step.
+    public bool TryRefreshFrom(VolumeToastViewModel other)
+    {
+        if (_isDisposed || !ReferenceEquals(_source, other._source))
+        {
+            return false;
+        }
+
+        UpdateVolume(other._volume);
+        UpdateIsMuted(other._isMuted);
+        return true;
+    }
+
     public void Dispose()
     {
         if (!_isDisposed)

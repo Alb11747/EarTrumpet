@@ -53,7 +53,7 @@ public partial class AppItemView : UserControl
             case Key.OemPeriod:
                 var isMuted = !App.IsMuted;
                 App.IsMuted = isMuted;
-                VolumeToastService.ShowApp(App, GetContainingScreen(), isMuted);
+                VolumeToastService.ShowApp(App, VolumeToastService.GetScreen(this), isMuted);
                 e.Handled = true;
                 break;
             case Key.Right:
@@ -79,16 +79,8 @@ public partial class AppItemView : UserControl
         App.Volume += delta;
         if (App.Volume != oldVolume)
         {
-            VolumeToastService.ShowApp(App, GetContainingScreen());
+            VolumeToastService.ShowApp(App, VolumeToastService.GetScreen(this));
         }
-    }
-
-    private System.Windows.Forms.Screen GetContainingScreen()
-    {
-        var window = Window.GetWindow(this);
-        return window == null
-            ? System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position)
-            : System.Windows.Forms.Screen.FromHandle(window.GetHandle());
     }
 
     private void OpenPopup()

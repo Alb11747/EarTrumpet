@@ -15,6 +15,7 @@ internal static class Program
             .Concat(VolumeHotkeySettingsTests.Cases())
             .Concat(VolumeSliderLifecycleTests.Cases())
             .Concat(VolumeToastLifetimeTests.Cases())
+            .Concat(VolumeToastViewModelTests.Cases())
             .Concat(AudioDeviceSessionVolumeTests.Cases()).ToArray();
         foreach (var (name, test) in cases)
         {

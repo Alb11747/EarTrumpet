@@ -1,5 +1,4 @@
-﻿using EarTrumpet.Extensions;
-using EarTrumpet.UI.Helpers;
+﻿using EarTrumpet.UI.Helpers;
 using EarTrumpet.UI.Notifications;
 using EarTrumpet.UI.ViewModels;
 using System.Windows;
@@ -79,7 +78,7 @@ public partial class DeviceView : UserControl
             case Key.OemPeriod:
                 var isMuted = !Device.IsMuted;
                 Device.IsMuted = isMuted;
-                VolumeToastService.ShowDevice(Device, GetContainingScreen(), isMuted);
+                VolumeToastService.ShowDevice(Device, VolumeToastService.GetScreen(this), isMuted);
                 e.Handled = true;
                 break;
             case Key.Right:
@@ -105,16 +104,8 @@ public partial class DeviceView : UserControl
         Device.Volume += delta;
         if (Device.Volume != oldVolume)
         {
-            VolumeToastService.ShowDevice(Device, GetContainingScreen());
+            VolumeToastService.ShowDevice(Device, VolumeToastService.GetScreen(this));
         }
-    }
-
-    private System.Windows.Forms.Screen GetContainingScreen()
-    {
-        var window = Window.GetWindow(this);
-        return window == null
-            ? System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position)
-            : System.Windows.Forms.Screen.FromHandle(window.GetHandle());
     }
 
     private static void DeviceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

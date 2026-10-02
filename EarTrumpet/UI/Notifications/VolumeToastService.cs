@@ -1,7 +1,9 @@
+using EarTrumpet.Extensions;
 using EarTrumpet.UI.ViewModels;
 using System;
 using System.Windows;
 using System.Windows.Threading;
+using Cursor = System.Windows.Forms.Cursor;
 using Screen = System.Windows.Forms.Screen;
 
 namespace EarTrumpet.UI.Notifications;
@@ -29,6 +31,13 @@ internal static class VolumeToastService
         {
             Show(VolumeToastViewModel.FromApp(app, isMuted), screen);
         }
+    }
+
+    // Changes made inside an EarTrumpet window show the toast on that window's monitor.
+    public static Screen GetScreen(DependencyObject element)
+    {
+        var window = element == null ? null : Window.GetWindow(element);
+        return window == null ? Screen.FromPoint(Cursor.Position) : Screen.FromHandle(window.GetHandle());
     }
 
     public static void Shutdown()
@@ -91,6 +100,7 @@ internal static class VolumeToastService
             s_window.UserActivity += Window_UserActivity;
             s_window.HoverChanged += Window_HoverChanged;
             s_window.InputCaptureChanged += Window_InputCaptureChanged;
+            s_window.CloseRequested += HideWindow;
             s_window.Closed += Window_Closed;
         }
 
@@ -182,24 +192,38 @@ internal static class VolumeToastService
     {
         if (ReferenceEquals(sender, s_window))
         {
-            s_window.UserActivity -= Window_UserActivity;
-            s_window.HoverChanged -= Window_HoverChanged;
-            s_window.InputCaptureChanged -= Window_InputCaptureChanged;
-            s_window.Closed -= Window_Closed;
-            s_window = null;
+            DetachWindow();
         }
 
-        if (s_hideTimer != null)
+        DisposeHideTimer();
+        s_lifetime.Reset();
+    }
+
+    private static void ShutdownCore()
+    {
+        DisposeHideTimer();
+
+        var window = s_window;
+        if (window != null)
         {
-            s_hideTimer.Stop();
-            s_hideTimer.Tick -= HideTimer_Tick;
-            s_hideTimer = null;
+            DetachWindow();
+            window.Close();
         }
 
         s_lifetime.Reset();
     }
 
-    private static void ShutdownCore()
+    private static void DetachWindow()
+    {
+        s_window.UserActivity -= Window_UserActivity;
+        s_window.HoverChanged -= Window_HoverChanged;
+        s_window.InputCaptureChanged -= Window_InputCaptureChanged;
+        s_window.CloseRequested -= HideWindow;
+        s_window.Closed -= Window_Closed;
+        s_window = null;
+    }
+
+    private static void DisposeHideTimer()
     {
         if (s_hideTimer != null)
         {
@@ -207,17 +231,5 @@ internal static class VolumeToastService
             s_hideTimer.Tick -= HideTimer_Tick;
             s_hideTimer = null;
         }
-
-        if (s_window != null)
-        {
-            s_window.UserActivity -= Window_UserActivity;
-            s_window.HoverChanged -= Window_HoverChanged;
-            s_window.InputCaptureChanged -= Window_InputCaptureChanged;
-            s_window.Closed -= Window_Closed;
-            s_window.Close();
-            s_window = null;
-        }
-
-        s_lifetime.Reset();
     }
 }

@@ -190,7 +190,7 @@ internal static class FocusedAppAudioControlTests
     };
 
     // Match mixer group semantics: reads use the first child, writes affect all children.
-    private sealed class TestApp(float volume) : BindableBase, IAppItemViewModel
+    internal sealed class TestApp(float volume) : BindableBase, IAppItemViewModel
     {
         private float _volume = volume;
         private bool _muted;
